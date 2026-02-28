@@ -355,6 +355,11 @@ The app uses custom CSS variables for theming. Key colors:
 - **Unicode Support**: Integrated **Noto Sans Georgian** for perfect Georgian character rendering.
 - **Fast Download**: One-click PDF generation from any registry row.
 
+### 3. Dashboard Visual Charts (Analytics) 📊
+- **Sales & Purchase Trends**: Interactive AreaChart showing a 30-day rolling window of business activity.
+- **Top Products**: BarChart visualization of the top 5 revenue-generating products.
+- **Dynamic Data**: Real-time aggregation of Supabase transaction data for up-to-the-minute insights.
+
 ---
 
 ## Recommended Future Features (v2 Roadmap)
