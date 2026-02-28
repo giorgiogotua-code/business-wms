@@ -145,8 +145,8 @@ export default function SalesPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{"გაყიდვა"}</h1>
         <div className="flex gap-2 no-print">
-          <Button variant="outline" size="icon" onClick={handleExportSales} aria-label="Excel ექსპორტი">
-            <Download className="h-5 w-5" />
+          <Button variant="outline" onClick={handleExportSales} aria-label="Excel ექსპორტი">
+            <Download className="mr-2 h-5 w-5" /> Excel ექსპორტი
           </Button>
           <Button variant="outline" size="icon" onClick={() => window.print()} aria-label="ბეჭდვა">
             <Printer className="h-5 w-5" />

@@ -228,11 +228,11 @@ export default function PurchasesPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{"შესყიდვები"}</h1>
         <div className="flex gap-2 no-print">
-          <Button variant="outline" size="icon" onClick={handleExportProducts} aria-label="Excel ექსპორტი">
-            <Download className="h-5 w-5" />
+          <Button variant="outline" onClick={handleExportProducts} aria-label="Excel ექსპორტი">
+            <Download className="mr-2 h-5 w-5" /> Excel ექსპორტი
           </Button>
-          <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} aria-label="Excel იმპორტი">
-            <Upload className="h-5 w-5" />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} aria-label="Excel იმპორტი">
+            <Upload className="mr-2 h-5 w-5" /> Excel იმპორტი
           </Button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportProducts} />
           <Button variant="outline" size="icon" onClick={() => window.print()} aria-label="ბეჭდვა">
