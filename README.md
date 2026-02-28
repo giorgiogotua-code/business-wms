@@ -16,11 +16,12 @@ Full-stack warehouse management web application built with **Next.js 16**, **Sup
 | shadcn/ui | latest | UI component library |
 | SWR | 2.3.3 | Client-side data fetching/caching |
 | xlsx | 0.18.5 | Excel import/export |
-| Recharts | 2.15.0 | Charts (installed, not yet used) |
+| Recharts | 2.15.0 | Interactive analytics charts |
 | sonner | 1.7.1 | Toast notifications |
 | lucide-react | 0.564.0 | Icons |
 | jspdf | latest | PDF generation core |
 | jspdf-autotable | latest | PDF table generation |
+| openai | latest | AI Assistant integration |
 
 ---
 
@@ -360,6 +361,12 @@ The app uses custom CSS variables for theming. Key colors:
 - **Top Products**: BarChart visualization of the top 5 revenue-generating products.
 - **Dynamic Data**: Real-time aggregation of Supabase transaction data for up-to-the-minute insights.
 
+### 4. JabsOna AI Assistant 🤖
+- **Conversational Analytics**: Chat with your data ("რა არის ჩემი მოგება?")
+- **Business Context**: The AI understands your products, sales trends, and stock levels.
+- **Geist UI**: Floating chat interface integrated into the dashboard layout.
+- **OpenAI Powered**: Uses GPT-4o-mini for fast and intelligent responses.
+
 ---
 
 ## Recommended Future Features (v2 Roadmap)
@@ -367,13 +374,7 @@ The app uses custom CSS variables for theming. Key colors:
 These are major features that would transform this from a basic tool into a complete business platform. Listed by priority:
 
 ### Tier 1 -- Critical Business Value
-1. **JabsOn AI Assistant (AI ასისტენტი)** 🤖
-   - Chat interface for business analytics (e.g., "რა იყო ჩემი მოგება გასულ თვეში?")
-   - Automated task execution (e.g., "შექმენი ზედნადები ამ პროდუქტებზე...")
-   - Business consultations and trend analysis.
-   - Integration with Supabase Edge Functions & OpenAI/Gemini.
-
-2. **Debt & Debtor Management (CRM / ვალების მართვა)** 💸
+1. **Debt & Debtor Management (CRM / ვალების მართვა)** 💸
    - Track customer debts and payment statuses.
    - Automated payment reminders (SMS/Email).
    - Detailed debtor reports and history.

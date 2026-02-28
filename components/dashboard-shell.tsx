@@ -2,6 +2,7 @@
 
 import { AppSidebar } from "@/components/app-sidebar"
 import { CommandMenu } from "@/components/command-menu"
+import { AiAssistant } from "@/components/ai-assistant"
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -16,6 +17,7 @@ export function DashboardShell({ children, userRole }: DashboardShellProps) {
       <main className="flex-1 overflow-y-auto bg-background">
         <div className="mx-auto max-w-6xl p-6">{children}</div>
       </main>
+      <AiAssistant />
     </div>
   )
 }
