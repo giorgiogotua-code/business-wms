@@ -238,7 +238,7 @@ export default function InventoryPage() {
 
       {/* Low Stock Warning */}
       {lowStockProducts.length > 0 && (
-        <Card className="mb-4 border-warning/50 bg-warning/5">
+        <Card className="mb-4 border-warning/50 bg-warning/5 no-print">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="h-5 w-5 text-warning" />

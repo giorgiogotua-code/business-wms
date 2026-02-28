@@ -233,7 +233,7 @@ export default function AccountingPage() {
       </Card>
 
       {/* Summary Cards */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 no-print">
         <Card>
           <CardContent className="flex flex-col items-center gap-2 p-6">
             <TrendingDown className="h-8 w-8 text-destructive" />
@@ -268,7 +268,7 @@ export default function AccountingPage() {
 
       {/* Tabs matching screenshot: ისტორია, მომგებიანობა, ხარჯები, მოლარეები */}
       <Tabs defaultValue="history">
-        <TabsList className="mb-4 w-full grid grid-cols-4">
+        <TabsList className="mb-4 w-full grid grid-cols-4 no-print">
           <TabsTrigger value="history">{"ისტორია"}</TabsTrigger>
           <TabsTrigger value="profitability">{"მომგებიანობა"}</TabsTrigger>
           <TabsTrigger value="expenses">{"ხარჯები"}</TabsTrigger>

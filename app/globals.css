@@ -168,35 +168,31 @@
   }
 
   /* Ensure cards look good on print */
-  [class*="card"] {
-    border: 1px solid #ddd !important;
+  [class*="card"],
+  .card {
+    border: 1px solid #eee !important;
     box-shadow: none !important;
     break-inside: avoid;
+    background: transparent !important;
   }
 
-  /* Print header */
-  .print-header {
-    display: block !important;
-    text-align: center;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #333;
-    padding-bottom: 10px;
-  }
-
-  .print-header h1 {
-    font-size: 20px;
-    font-weight: bold;
-  }
-
-  .print-header p {
-    font-size: 11px;
-    color: #666;
-  }
-
-  /* Table styling for print */
+  /* Force table layouts */
   table {
-    width: 100% !important;
-    border-collapse: collapse !important;
+    border: 1px solid #ddd !important;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
   }
 
   th,

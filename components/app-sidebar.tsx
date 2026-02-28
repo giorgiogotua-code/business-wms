@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
+import { TetrisLogo } from "@/components/tetris-logo"
 
 interface AppSidebarProps {
   userRole: string
@@ -59,16 +60,10 @@ export function AppSidebar({ userRole }: AppSidebarProps) {
       )}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 border-b border-sidebar-border p-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
-          <Package className="h-5 w-5 text-sidebar-primary-foreground" />
+      <div className="flex items-center justify-center border-b border-sidebar-border h-24 overflow-hidden relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-[0.4]">
+          <TetrisLogo />
         </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <h1 className="text-base font-bold leading-tight text-sidebar-foreground">JabsOna-MTS</h1>
-            <p className="text-xs text-sidebar-foreground/60">{"საწყობის მართვა"}</p>
-          </div>
-        )}
       </div>
 
       {/* Toggle */}
