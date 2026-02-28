@@ -56,6 +56,7 @@ All tables have **Row Level Security (RLS)** enabled. Policies allow all authent
 | quantity | INTEGER | DEFAULT 0 |
 | unit | TEXT | DEFAULT 'ცალი' (options: ცალი, კგ, ლიტრი, მეტრი) |
 | low_stock_threshold | INTEGER | DEFAULT 10 |
+| barcode | TEXT | UNIQUE, nullable |
 | created_at | TIMESTAMPTZ | DEFAULT now() |
 | updated_at | TIMESTAMPTZ | DEFAULT now() |
 
@@ -193,23 +194,24 @@ Cannot access Accounting or Admin Panel. Role filtering happens in `app-sidebar.
 
 ### Purchases (`/dashboard/purchases/page.tsx`)
 - **Category management**: Inline add/delete categories (via `CategoryManager` component)
-- **New product form**: Name, category (optional), description, purchase price, sale price, quantity, unit (ცალი/კგ/ლიტრი/მეტრი)
+- **New product form**: Name, category (optional), barcode (optional), description, purchase price, sale price, quantity, unit (ცალი/კგ/ლიტრი/მეტრი)
 - **Add stock to existing**: Select product from dropdown, enter quantity + price, automatically updates product quantity and creates a `purchase` transaction
-- **Excel export**: Downloads all products as .xlsx
-- **Excel import**: Reads .xlsx rows and creates products + purchase transactions
+- **Excel export**: Downloads all products as .xlsx (including barcodes)
+- **Excel import**: Reads .xlsx rows and creates products + purchase transactions (supports barcode import)
 - **Print**: window.print() with PrintHeader
 
 ### Sales (`/dashboard/sales/page.tsx`)
 - **Category filter dropdown**: Filter products by category
 - **Product selection**: Select a product, shows current stock, purchase price, and sale price
 - **Quantity + price inputs**: Enter quantity and price per unit
+- **Barcode Scanner**: Dedicated input for high-speed scanning. Automatically identifies and adds products to cart.
 - **Auto-calculated total**: quantity * price shown as total
 - **On sale**: Creates a `sale` transaction, decrements product quantity
 - Validates stock availability before sale
 - **Excel export** and **Print** buttons
 
 ### Inventory (`/dashboard/inventory/page.tsx`)
-- **Search**: Real-time filter by product name
+- **Search**: Real-time filter by product name or barcode
 - **Sort**: By name (alphabetical), price (descending), stock (ascending)
 - **Category filter**: Buttons showing category name + count, plus "all"
 - **Low stock warning**: Yellow card showing all products below their `low_stock_threshold`
@@ -324,8 +326,7 @@ The app uses custom CSS variables for theming. Key colors:
 9. **Dark mode toggle**: Theme tokens are set up for light mode only. Could add dark mode support with next-themes (already installed).
 10. **Mobile responsiveness**: Sidebar collapses but mobile UX could be improved with a sheet/drawer pattern.
 11. **Audit log**: Track who made what changes and when.
-12. **Barcode/QR scanning**: For faster product lookup during sales.
-13. **Multi-currency support**: Currently hardcoded to Georgian Lari (&#8382;).
+12. **Multi-currency support**: Currently hardcoded to Georgian Lari (&#8382;).
 14. **Receipt printing**: Generate formatted receipt for sales, not just page print.
 15. **Dashboard date range**: Dashboard summary doesn't support date filtering unlike accounting.
 16. **Supplier management**: No suppliers table or tracking. Could add supplier info to purchases.
@@ -366,6 +367,11 @@ The app uses custom CSS variables for theming. Key colors:
 - **Business Context**: The AI understands your products, sales trends, and stock levels.
 - **Geist UI**: Floating chat interface integrated into the dashboard layout.
 - **OpenAI Powered**: Uses GPT-4o-mini for fast and intelligent responses.
+
+### 5. Barcode & SKU Support 🏷️
+- **Automated Scanning**: High-speed checkout flow on the Sales page.
+- **Universal Lookup**: Search by barcode in Inventory and Purchases.
+- **Excel Sync**: Full barcode support for bulk data imports and exports.
 
 ---
 
