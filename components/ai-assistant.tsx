@@ -17,7 +17,7 @@ export function AiAssistant() {
     const [isOpen, setIsOpen] = useState(false)
     const [input, setInput] = useState("")
     const [messages, setMessages] = useState<Message[]>([
-        { role: "assistant", content: "გამარჯობა! მე ვარ JabsOna AI. რით შემიძლია დაგეხმაროთ?" }
+        { role: "assistant", content: "გამარჯობა! მე ვარ DASTA AI. რით შემიძლია დაგეხმაროთ?" }
     ])
     const [loading, setLoading] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -81,7 +81,7 @@ export function AiAssistant() {
                 <CardHeader className="flex flex-row items-center justify-between border-b p-4 bg-primary text-primary-foreground rounded-t-lg">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Bot className="h-5 w-5" />
-                        JabsOna AI
+                        DASTA AI
                     </CardTitle>
                     <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="text-primary-foreground hover:bg-primary-foreground/20">
                         <X className="h-5 w-5" />

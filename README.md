@@ -1,4 +1,4 @@
-# JabsOna-MTS - Warehouse Management System
+# DASTA - Warehouse Management System
 
 ## Overview
 Full-stack warehouse management web application built with **Next.js 16**, **Supabase**, and **Tailwind CSS v4**. The entire UI is in **Georgian language** and uses **Georgian Lari** (&#8382;) as the currency. Role-based access control distinguishes between **admin** and **cashier** users.
@@ -268,7 +268,7 @@ After mutations, `mutate("key")` is called to refresh related data.
 ---
 
 ## Print System
-- `components/print-header.tsx`: Hidden div that becomes visible during print, shows "JabsOna-MTS", page title, date/time
+- `components/print-header.tsx`: Hidden div that becomes visible during print, shows "DASTA", page title, date/time
 - `app/globals.css` has `@media print` styles that:
   - Hide sidebar, navigation, buttons (`.no-print` class)
   - Make main content full width
@@ -361,7 +361,7 @@ The app uses custom CSS variables for theming. Key colors:
 - **Top Products**: BarChart visualization of the top 5 revenue-generating products.
 - **Dynamic Data**: Real-time aggregation of Supabase transaction data for up-to-the-minute insights.
 
-### 4. JabsOna AI Assistant 🤖
+### 4. DASTA AI Assistant 🤖
 - **Conversational Analytics**: Chat with your data ("რა არის ჩემი მოგება?")
 - **Business Context**: The AI understands your products, sales trends, and stock levels.
 - **Geist UI**: Floating chat interface integrated into the dashboard layout.
@@ -431,7 +431,7 @@ These are major features that would transform this from a basic tool into a comp
 
 8. **Progressive Web App (PWA)**
    - Add `next-pwa` for service worker and offline support
-   - App manifest with JabsOna-MTS branding
+   - App manifest with DASTA branding
    - Cashiers can install on phone home screen
    - Offline mode: cache product list, queue sales for sync when online
    - Push notifications for low stock alerts

@@ -19,7 +19,7 @@ export async function getBusinessContext() {
     .filter(t => t.type === "sale")
     .reduce((sum, t) => sum + Number(t.total_amount), 0)
 
-  let context = `შენ ხარ JabsOna AI ასისტენტი, პროფესიონალი ბიზნეს კონსულტანტი.
+  let context = `შენ ხარ DASTA AI ასისტენტი, პროფესიონალი ბიზნეს კონსულტანტი.
 აქ მოცემულია კომპანიის მიმდინარე მდგომარეობა:
 
 კატეგორიები: ${categories.map(c => c.name).join(", ")}

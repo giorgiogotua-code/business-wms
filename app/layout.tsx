@@ -8,8 +8,8 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "JabsOna-MTS | საწყობის მართვა",
-  description: "საწყობის მართვის სისტემა - JabsOna-MTS",
+  title: "DASTA | საწყობის მართვა",
+  description: "საწყობის მართვის სისტემა - DASTA",
 }
 
 export const viewport: Viewport = {
