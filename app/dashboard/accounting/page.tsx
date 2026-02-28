@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TrendingDown, TrendingUp, AlertCircle, BarChart3, Printer, Download, Upload, Trash2 } from "lucide-react"
+import { TrendingDown, TrendingUp, AlertCircle, BarChart3, Printer, Download, Upload, Trash2, RefreshCw, Truck } from "lucide-react"
 import { toast } from "sonner"
 import { exportToExcel, importFromExcel } from "@/lib/excel"
 import { PrintHeader } from "@/components/print-header"
 import { logAction } from "@/lib/audit"
+import { useRsGe } from "@/hooks/useRsGe"
+import { WaybillStatusBadge } from "@/components/rs-ge/WaybillStatusBadge"
+import { format, subDays } from "date-fns"
 
 const supabase = createClient()
 
@@ -71,6 +74,19 @@ export default function AccountingPage() {
   const [txFilter, setTxFilter] = useState<"all" | "purchase" | "sale">("all")
   const [txSearch, setTxSearch] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { getWaybills, loading: rsLoading } = useRsGe()
+  const [rsWaybills, setRsWaybills] = useState<any[]>([])
+  const [rsDateFrom, setRsDateFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"))
+  const [rsDateTo, setRsDateTo] = useState(format(new Date(), "yyyy-MM-dd"))
+
+  async function handleRsSync() {
+    const data = await getWaybills(rsDateFrom, rsDateTo)
+    if (data) {
+      setRsWaybills(data)
+      toast.success("მონაცემები სინქრონიზებულია")
+    }
+  }
 
   const filtered = useMemo(() => {
     let txs = transactions
@@ -268,11 +284,15 @@ export default function AccountingPage() {
 
       {/* Tabs matching screenshot: ისტორია, მომგებიანობა, ხარჯები, მოლარეები */}
       <Tabs defaultValue="history">
-        <TabsList className="mb-4 w-full grid grid-cols-4 no-print">
+        <TabsList className="mb-4 w-full grid grid-cols-5 no-print">
           <TabsTrigger value="history">{"ისტორია"}</TabsTrigger>
           <TabsTrigger value="profitability">{"მომგებიანობა"}</TabsTrigger>
           <TabsTrigger value="expenses">{"ხარჯები"}</TabsTrigger>
           <TabsTrigger value="cashiers">{"მოლარეები"}</TabsTrigger>
+          <TabsTrigger value="rsge" className="gap-2">
+            <Truck className="h-4 w-4" />
+            {"rs.ge სინქრონიზაცია"}
+          </TabsTrigger>
         </TabsList>
 
         {/* ისტორია Tab */}
@@ -497,6 +517,63 @@ export default function AccountingPage() {
                   </table>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        {/* rs.ge სინქრონიზაცია Tab */}
+        <TabsContent value="rsge">
+          <Card>
+            <CardContent className="p-4">
+              <div className="mb-6 flex flex-wrap items-end gap-4 border-b pb-6">
+                <div className="flex flex-col gap-2">
+                  <Label>{"თარიღიდან"}</Label>
+                  <Input type="date" value={rsDateFrom} onChange={(e) => setRsDateFrom(e.target.value)} className="w-40" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>{"თარიღამდე"}</Label>
+                  <Input type="date" value={rsDateTo} onChange={(e) => setRsDateTo(e.target.value)} className="w-40" />
+                </div>
+                <Button onClick={handleRsSync} disabled={rsLoading} className="gap-2">
+                  <RefreshCw className={`h-4 w-4 ${rsLoading ? "animate-spin" : ""}`} />
+                  {"rs.ge-დან ჩამოტვირთვა"}
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="p-3 text-left">{"ნომერი"}</th>
+                      <th className="p-3 text-left">{"თარიღი"}</th>
+                      <th className="p-3 text-left">{"მყიდველი"}</th>
+                      <th className="p-3 text-center">{"სტატუსი"}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {rsWaybills.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                          {rsLoading ? "იტვირთება..." : "მონაცემები არ არის. აირჩიეთ პერიოდი და დააჭირეთ ჩამოტვირთვას."}
+                        </td>
+                      </tr>
+                    ) : (
+                      rsWaybills.map((wb) => (
+                        <tr key={wb.id} className="hover:bg-muted/30">
+                          <td className="p-3 font-mono font-bold text-primary">{wb.number}</td>
+                          <td className="p-3 text-muted-foreground">{wb.createDate}</td>
+                          <td className="p-3">
+                            <p className="font-medium">{wb.buyerName}</p>
+                            <p className="text-xs text-muted-foreground">{wb.buyerTin}</p>
+                          </td>
+                          <td className="p-3 text-center">
+                            <WaybillStatusBadge status={wb.status} />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

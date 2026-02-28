@@ -9,11 +9,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, ArrowUpDown, Printer, Pencil, Trash2, AlertTriangle, DollarSign, Download, Upload } from "lucide-react"
+import { Search, ArrowUpDown, Printer, Pencil, Trash2, AlertTriangle, DollarSign, Download, Upload, Package } from "lucide-react"
 import { toast } from "sonner"
 import { exportToExcel, importFromExcel } from "@/lib/excel"
+import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 import { PrintHeader } from "@/components/print-header"
 import { logAction } from "@/lib/audit"
+import { useRouter } from "next/navigation"
 
 const supabase = createClient()
 
@@ -59,7 +62,10 @@ export default function InventoryPage() {
     low_stock_threshold: "",
     category_id: "",
   })
+  const [sellingProduct, setSellingProduct] = useState<Product | null>(null)
+  const [sellForm, setSellForm] = useState({ quantity: "1", price: "" })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   const lowStockProducts = products.filter((p) => p.quantity <= p.low_stock_threshold)
 
@@ -136,6 +142,57 @@ export default function InventoryPage() {
 
     toast.success("პროდუქტი წაიშალა")
     await logAction("პროდუქტის წაშლა", { name })
+    mutate("products")
+    mutate("dashboard-data")
+  }
+
+  function openQuickSell(product: Product) {
+    setSellingProduct(product)
+    setSellForm({ quantity: "1", price: String(product.sale_price) })
+  }
+
+  async function handleQuickSell(e: React.FormEvent) {
+    e.preventDefault()
+    if (!sellingProduct) return
+
+    const qty = Number(sellForm.quantity)
+    const price = Number(sellForm.price)
+
+    if (qty > sellingProduct.quantity) {
+      toast.error("მარაგი არ არის საკმარისი")
+      return
+    }
+
+    const total = qty * price
+
+    // 1. Update product quantity
+    const { error: pError } = await supabase
+      .from("products")
+      .update({ quantity: sellingProduct.quantity - qty })
+      .eq("id", sellingProduct.id)
+
+    if (pError) {
+      toast.error("შეცდომა მარაგის განახლებისას")
+      return
+    }
+
+    // 2. Create transaction
+    const { error: tError } = await supabase.from("transactions").insert({
+      product_id: sellingProduct.id,
+      type: "sale",
+      quantity: qty,
+      price_per_unit: price,
+      total_amount: total,
+    })
+
+    if (tError) {
+      toast.error("შეცდომა ტრანზაქციისას")
+      return
+    }
+
+    toast.success("გაყიდვა წარმატებით დასრულდა")
+    await logAction("სწრაფი გაყიდვა (ნაშთიდან)", { name: sellingProduct.name, qty, total })
+    setSellingProduct(null)
     mutate("products")
     mutate("dashboard-data")
   }
@@ -229,7 +286,7 @@ export default function InventoryPage() {
         <Button variant={selectedCategory === "all" ? "default" : "outline"} size="sm" onClick={() => setSelectedCategory("all")}>
           {`ყველა (${products.length})`}
         </Button>
-        {categoryCounts.map((cat) => (
+        {categoryCounts.map((cat: any) => (
           <Button key={cat.id} variant={selectedCategory === cat.id ? "default" : "outline"} size="sm" onClick={() => setSelectedCategory(cat.id)}>
             {`${cat.name} (${cat.count})`}
           </Button>
@@ -261,42 +318,51 @@ export default function InventoryPage() {
             <CardContent className="p-8 text-center text-muted-foreground">{"პროდუქტები არ მოიძებნა"}</CardContent>
           </Card>
         ) : (
-          filteredProducts.map((product) => (
-            <Card key={product.id}>
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex-1">
+          filteredProducts.map((product) => {
+            const status = product.quantity === 0
+              ? { label: "ამოწურულია", color: "bg-destructive text-destructive-foreground" }
+              : product.quantity <= product.low_stock_threshold
+                ? { label: "დაბალი მარაგი", color: "bg-warning text-warning-foreground" }
+                : { label: "მარაგშია", color: "bg-success text-success-foreground" }
+
+            return (
+              <Card key={product.id} className="overflow-hidden group hover:border-primary/50 transition-colors">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div className="flex gap-4 items-center">
+                    <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center text-muted-foreground shrink-0 border">
+                      <Package className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-foreground">{product.name}</h3>
+                        <Badge className={cn("text-[10px] h-5", status.color)} variant="outline">
+                          {status.label}
+                        </Badge>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                        {product.categories?.name && <span>{product.categories.name}</span>}
+                        <span>{`გასაყიდი: ${Number(product.sale_price).toFixed(2)} \u20BE`}</span>
+                        <span>{`რაოდენობა: ${product.quantity} ${product.unit}`}</span>
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold text-foreground">{product.name}</h3>
-                    {product.quantity <= product.low_stock_threshold && (
-                      <AlertTriangle className="h-4 w-4 text-warning" />
-                    )}
+                    <div className="flex items-center gap-1 no-print">
+                      <Button variant="outline" size="sm" className="hidden sm:flex gap-2 text-success hover:text-success border-success/20 hover:bg-success/10" onClick={() => openQuickSell(product)}>
+                        <DollarSign className="h-4 w-4" /> Quick Sell
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(product)} aria-label="რედაქტირება">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id, product.name)} aria-label="წაშლა" className="text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    {product.categories?.name && <span>{"კატეგორია: "}{product.categories.name}</span>}
-                    <span>{"ერთეული: "}{product.unit}</span>
-                    <span>{`შესყიდვის ფასი: ${Number(product.purchase_price).toFixed(2)} \u20BE`}</span>
-                    <span>{`გასაყიდი ფასი: ${Number(product.sale_price).toFixed(2)} \u20BE`}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <p className={`text-2xl font-bold ${product.quantity <= product.low_stock_threshold ? "text-destructive" : "text-success"}`}>
-                      {product.quantity}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{product.unit}</p>
-                  </div>
-                  <div className="flex flex-col gap-1 ml-3 no-print">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(product)} aria-label="რედაქტირება">
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id, product.name)} aria-label="წაშლა" className="text-destructive hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            )
+          })
         )}
       </div>
 
@@ -357,6 +423,48 @@ export default function InventoryPage() {
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => setEditProduct(null)}>{"გაუქმება"}</Button>
               <Button type="submit">{"შენახვა"}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Sell Dialog */}
+      <Dialog open={!!sellingProduct} onOpenChange={() => setSellingProduct(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{sellingProduct?.name} - სწრაფი გაყიდვა</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleQuickSell} className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>რაოდენობა (მარაგი: {sellingProduct?.quantity} {sellingProduct?.unit})</Label>
+                <Input
+                  type="number"
+                  value={sellForm.quantity}
+                  onChange={(e) => setSellForm({ ...sellForm, quantity: e.target.value })}
+                  max={sellingProduct?.quantity}
+                  min="1"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>გასაყიდი ფასი (⾾)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={sellForm.price}
+                  onChange={(e) => setSellForm({ ...sellForm, price: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="rounded-lg bg-muted p-3 text-center">
+              <p className="text-sm text-muted-foreground">ჯამური თანხა</p>
+              <p className="text-2xl font-bold">{(Number(sellForm.quantity) * Number(sellForm.price)).toFixed(2)} ⾾</p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setSellingProduct(null)}>გაუქმება</Button>
+              <Button type="submit" className="bg-success hover:bg-success/90">გაყიდვის დადასტურება</Button>
             </div>
           </form>
         </DialogContent>

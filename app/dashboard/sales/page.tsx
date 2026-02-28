@@ -27,6 +27,14 @@ interface Product {
   categories: { name: string } | null
 }
 
+interface CartItem {
+  id: string
+  name: string
+  quantity: number
+  price: number
+  unit: string
+}
+
 async function fetchProducts(): Promise<Product[]> {
   const { data } = await supabase.from("products").select("*, categories(name)").order("name")
   return (data as Product[]) || []
@@ -44,6 +52,7 @@ export default function SalesPage() {
   const [selectedProductId, setSelectedProductId] = useState("")
   const [quantity, setQuantity] = useState("")
   const [salePrice, setSalePrice] = useState("")
+  const [cart, setCart] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(false)
 
   const filteredProducts = useMemo(() => {
@@ -62,68 +71,95 @@ export default function SalesPage() {
     const product = products.find((p) => p.id === productId)
     if (product) {
       setSalePrice(String(product.sale_price))
+      setQuantity("1")
     }
   }
 
-  async function handleSale(e: React.FormEvent) {
+  function addToCart(e: React.FormEvent) {
     e.preventDefault()
     if (!selectedProduct) return
-    setLoading(true)
 
     const qty = Number(quantity)
     if (qty > selectedProduct.quantity) {
       toast.error(`მარაგში მხოლოდ ${selectedProduct.quantity} ${selectedProduct.unit} არის`)
-      setLoading(false)
       return
     }
 
     if (qty <= 0) {
       toast.error("რაოდენობა უნდა იყოს 0-ზე მეტი")
-      setLoading(false)
       return
     }
 
-    // Update product quantity
-    const { error: updateError } = await supabase
-      .from("products")
-      .update({
-        quantity: selectedProduct.quantity - qty,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", selectedProduct.id)
-
-    if (updateError) {
-      toast.error("შეცდომა გაყიდვისას")
-      setLoading(false)
-      return
+    const existingIndex = cart.findIndex(item => item.id === selectedProduct.id)
+    if (existingIndex > -1) {
+      const newCart = [...cart]
+      newCart[existingIndex].quantity += qty
+      setCart(newCart)
+    } else {
+      setCart([...cart, {
+        id: selectedProduct.id,
+        name: selectedProduct.name,
+        quantity: qty,
+        price: Number(salePrice),
+        unit: selectedProduct.unit
+      }])
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
-
-    // Record transaction
-    const { error: txError } = await supabase.from("transactions").insert({
-      product_id: selectedProduct.id,
-      type: "sale",
-      quantity: qty,
-      price_per_unit: Number(salePrice),
-      total_amount: totalAmount,
-      user_id: user?.id
-    })
-
-    if (txError) {
-      toast.error("ტრანზაქციის შეცდომა")
-      setLoading(false)
-      return
-    }
-
-    toast.success(`${selectedProduct.name} - ${qty} ${selectedProduct.unit} გაიყიდა`)
-    await logAction("გაყიდვა", { product: selectedProduct.name, quantity: qty, total: totalAmount })
     setSelectedProductId("")
     setQuantity("")
     setSalePrice("")
-    setLoading(false)
-    mutate("products")
-    mutate("dashboard-data")
+    toast.success(`${selectedProduct.name} დაემატა კალათაში`)
+  }
+
+  function removeFromCart(id: string) {
+    setCart(cart.filter(item => item.id !== id))
+  }
+
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+
+  async function handleCheckout() {
+    if (cart.length === 0) return
+    setLoading(true)
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+
+      for (const item of cart) {
+        const product = products.find(p => p.id === item.id)
+        if (!product) continue
+
+        // 1. Update Inventory
+        const { error: pError } = await supabase
+          .from("products")
+          .update({ quantity: product.quantity - item.quantity })
+          .eq("id", item.id)
+
+        if (pError) throw pError
+
+        // 2. Insert Transaction
+        const { error: tError } = await supabase.from("transactions").insert({
+          product_id: item.id,
+          type: "sale",
+          quantity: item.quantity,
+          price_per_unit: item.price,
+          total_amount: item.price * item.quantity,
+          user_id: user?.id
+        })
+
+        if (tError) throw tError
+      }
+
+      toast.success("გაყიდვა წარმატებით დასრულდა")
+      await logAction("ჯგუფური გაყიდვა", { items: cart.length, total: cartTotal })
+      setCart([])
+      mutate("products")
+      mutate("dashboard-data")
+    } catch (error) {
+      console.error(error)
+      toast.error("დაფიქსირდა შეცდომა")
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleExportSales() {
@@ -154,103 +190,153 @@ export default function SalesPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{"ახალი გაყიდვა"}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSale} className="flex flex-col gap-4">
-            {/* Category Filter */}
-            <div className="flex flex-col gap-2">
-              <Label>{"კატეგორია (ფილტრი)"}</Label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{"ყველა"}</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Selection Form */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>{"პროდუქტის შერჩევა"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={addToCart} className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {/* Category Filter */}
+                  <div className="flex flex-col gap-2">
+                    <Label>{"კატეგორია"}</Label>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{"ყველა"}</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {/* Product Selection */}
-            <div className="flex flex-col gap-2">
-              <Label>{"პროდუქტი *"}</Label>
-              <Select value={selectedProductId} onValueChange={handleProductSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="აირჩიეთ პროდუქტი" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredProducts.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} {`(ნაშთი: ${p.quantity} ${p.unit})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Product details */}
-            {selectedProduct && (
-              <div className="rounded-lg bg-muted p-3 text-sm">
-                <div className="flex flex-wrap gap-x-6 gap-y-1">
-                  <span>{"შესყიდვის ფასი: "}<strong>{Number(selectedProduct.purchase_price).toFixed(2)} {"\u20BE"}</strong></span>
-                  <span>{"გასაყიდი ფასი: "}<strong>{Number(selectedProduct.sale_price).toFixed(2)} {"\u20BE"}</strong></span>
-                  <span>{"ნაშთი: "}<strong>{selectedProduct.quantity} {selectedProduct.unit}</strong></span>
+                  {/* Product Selection */}
+                  <div className="flex flex-col gap-2">
+                    <Label>{"პროდუქტი *"}</Label>
+                    <Select value={selectedProductId} onValueChange={handleProductSelect}>
+                      <SelectTrigger><SelectValue placeholder="აირჩიეთ პროდუქტი" /></SelectTrigger>
+                      <SelectContent>
+                        {filteredProducts.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} {`(ნაშთი: ${p.quantity} ${p.unit})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
+                {selectedProduct && (
+                  <div className="rounded-lg bg-muted p-3 text-sm flex justify-between items-center">
+                    <div>
+                      <p>გასაყიდი ფასი: <strong>{Number(selectedProduct.sale_price).toFixed(2)} ⾾</strong></p>
+                      <p>ნაშთი: <strong>{selectedProduct.quantity} {selectedProduct.unit}</strong></p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <Label>{"რაოდენობა *"}</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={selectedProduct?.quantity}
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label>{"ფასი (⾾) *"}</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={salePrice}
+                      onChange={(e) => setSalePrice(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" variant="outline" className="gap-2 border-primary text-primary hover:bg-primary/10">
+                  <ShoppingCart className="h-4 w-4" />
+                  კალათაში დამატება
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Cart Sidebar */}
+        <div className="lg:col-span-1">
+          <Card className="h-full flex flex-col sticky top-6">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5 text-primary" />
+                კალათა
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 p-0 overflow-auto max-h-[500px]">
+              {cart.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground italic">
+                  კალათა ცარიელია
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {cart.map((item) => (
+                    <div key={item.id} className="p-4 flex justify-between items-center group">
+                      <div>
+                        <p className="font-bold">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.quantity} {item.unit} x {item.price.toFixed(2)} ⾾</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="font-bold">{(item.quantity * item.price).toFixed(2)} ⾾</p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeFromCart(item.id)}
+                        >
+                          &times;
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+            {cart.length > 0 && (
+              <div className="p-4 border-t space-y-4 bg-muted/20">
+                <div className="flex justify-between items-center text-lg">
+                  <span className="font-bold">სულ:</span>
+                  <span className="font-bold text-2xl text-primary">{cartTotal.toFixed(2)} ⾾</span>
+                </div>
+                <Button
+                  className="w-full h-12 text-lg gap-2"
+                  disabled={loading}
+                  onClick={handleCheckout}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  {loading ? "მუშავდება..." : "გაფორმება"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full text-xs text-muted-foreground h-8"
+                  onClick={() => setCart([])}
+                  disabled={loading}
+                >
+                  გასუფთავება
+                </Button>
               </div>
             )}
-
-            {/* Quantity and Price */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label>{"რაოდენობა *"}</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  max={selectedProduct?.quantity}
-                  placeholder="0"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>{`ფასი (\u20BE) *`}</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={salePrice}
-                  onChange={(e) => setSalePrice(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Total */}
-            {quantity && salePrice && (
-              <div className="rounded-lg bg-primary/5 p-4 text-center">
-                <p className="text-sm text-muted-foreground">{"ჯამი"}</p>
-                <p className="text-3xl font-bold text-foreground">
-                  {totalAmount.toFixed(2)} {"\u20BE"}
-                </p>
-              </div>
-            )}
-
-            <Button type="submit" disabled={loading || !selectedProductId} size="lg" className="gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              {loading ? "იტვირთება..." : "გაყიდვა"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

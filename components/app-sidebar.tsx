@@ -17,6 +17,7 @@ import {
   Sun,
   Moon,
   Truck,
+  Receipt,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -29,11 +30,14 @@ interface AppSidebarProps {
 
 const allNavItems = [
   { href: "/dashboard", label: "მთავარი", icon: Home, roles: ["admin", "cashier", "accountant"] },
+  { href: "/dashboard/waybills", label: "ზედნადებები", icon: Truck, roles: ["admin", "cashier", "accountant"] },
+  { href: "/dashboard/invoices", label: "ფაქტურები", icon: Receipt, roles: ["admin", "accountant"] },
   { href: "/dashboard/purchases", label: "შესყიდვა", icon: ShoppingCart, roles: ["admin", "cashier"] },
   { href: "/dashboard/sales", label: "გაყიდვა", icon: TrendingUp, roles: ["admin", "cashier"] },
   { href: "/dashboard/inventory", label: "ნაშთი", icon: Package, roles: ["admin", "cashier", "accountant"] },
   { href: "/dashboard/suppliers", label: "მომწოდებლები", icon: Truck, roles: ["admin", "cashier", "accountant"] },
   { href: "/dashboard/accounting", label: "ბუღალტერია", icon: FileText, roles: ["admin", "accountant"] },
+  { href: "/dashboard/settings", label: "პარამეტრები", icon: Settings, roles: ["admin", "accountant"] },
   { href: "/dashboard/admin", label: "ადმინ პანელი", icon: Settings, roles: ["admin"] },
 ]
 

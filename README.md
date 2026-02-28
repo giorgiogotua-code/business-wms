@@ -19,6 +19,8 @@ Full-stack warehouse management web application built with **Next.js 16**, **Sup
 | Recharts | 2.15.0 | Charts (installed, not yet used) |
 | sonner | 1.7.1 | Toast notifications |
 | lucide-react | 0.564.0 | Icons |
+| jspdf | latest | PDF generation core |
+| jspdf-autotable | latest | PDF table generation |
 
 ---
 
@@ -337,12 +339,41 @@ The app uses custom CSS variables for theming. Key colors:
 
 ---
 
+---
+
+## Recent Features (February 2026)
+
+### 1. RS.GE Integration (Revenue Service)
+- **Waybills (ზედნადებები)**: Create, save, send, and manage shipping waybills directly from the dashboard.
+- **Tax Invoices (ფაქტურები)**: Create and upload VAT tax invoices to the rs.ge portal.
+- **TIN Lookup**: Automatic company name and VAT status lookup by Tax Identification Number.
+- **SOAP Client**: Built-in integration with rs.ge SOAP services.
+- **Sync**: Import waybill data into the accounting module for reconciliation.
+
+### 2. Professional PDF Generation 📄
+- **Template System**: Branded, professional PDF layouts for waybills and invoices.
+- **Unicode Support**: Integrated **Noto Sans Georgian** for perfect Georgian character rendering.
+- **Fast Download**: One-click PDF generation from any registry row.
+
+---
+
 ## Recommended Future Features (v2 Roadmap)
 
 These are major features that would transform this from a basic tool into a complete business platform. Listed by priority:
 
 ### Tier 1 -- Critical Business Value
-1. **Dashboard Live Charts (Recharts)**
+1. **JabsOn AI Assistant (AI ასისტენტი)** 🤖
+   - Chat interface for business analytics (e.g., "რა იყო ჩემი მოგება გასულ თვეში?")
+   - Automated task execution (e.g., "შექმენი ზედნადები ამ პროდუქტებზე...")
+   - Business consultations and trend analysis.
+   - Integration with Supabase Edge Functions & OpenAI/Gemini.
+
+2. **Debt & Debtor Management (CRM / ვალების მართვა)** 💸
+   - Track customer debts and payment statuses.
+   - Automated payment reminders (SMS/Email).
+   - Detailed debtor reports and history.
+
+3. **Dashboard Live Charts (Recharts)**
    - Sales/purchases trend line chart for last 7/30 days
    - Top 5 best-selling products bar chart
    - Profit dynamics over time

@@ -1,9 +1,11 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+import Link from "next/link"
 import useSWR from "swr"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Package, TrendingUp, TrendingDown, DollarSign, BarChart3, LineChart as LineChartIcon } from "lucide-react"
+import { Package, TrendingUp, TrendingDown, DollarSign, BarChart3, LineChart as LineChartIcon, PieChart as PieChartIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   LineChart,
@@ -17,18 +19,22 @@ import {
   Bar,
   Legend,
   Cell,
+  PieChart,
+  Pie,
 } from "recharts"
 
 const supabase = createClient()
 
 async function fetchDashboardData() {
-  const [productsRes, transactionsRes] = await Promise.all([
+  const [productsRes, transactionsRes, categoriesRes] = await Promise.all([
     supabase.from("products").select("*"),
     supabase.from("transactions").select("*"),
+    supabase.from("categories").select("*"),
   ])
 
   const products = productsRes.data || []
   const transactions = transactionsRes.data || []
+  const categories = categoriesRes.data || []
 
   const totalProducts = products.length
   const totalStock = products.reduce((sum, p) => sum + (p.quantity || 0), 0)
@@ -61,8 +67,13 @@ async function fetchDashboardData() {
       date: new Date(date).toLocaleDateString("ka-GE", { day: "numeric", month: "short" }),
       "გაყიდვა": sales,
       "შესყიდვა": purchases,
+      "მოგება": sales - purchases,
     }
   })
+
+  // Product helper maps
+  const productsMap = new Map(products.map(p => [p.id, p]))
+  const catsMap = new Map(categories.map(c => [c.id, c.name]))
 
   // Top products data
   const productSales: Record<string, { name: string; amount: number }> = {}
@@ -71,21 +82,30 @@ async function fetchDashboardData() {
     .forEach((t) => {
       const pId = t.product_id
       if (!productSales[pId]) {
-        // Fallback for missing product relation in this fetch
-        productSales[pId] = { name: "უცნობი", amount: 0 }
+        productSales[pId] = { name: productsMap.get(pId)?.name || "უცნობი", amount: 0 }
       }
       productSales[pId].amount += Number(t.total_amount)
     })
 
-  // To get names, we need products map
-  const productsMap = new Map(products.map(p => [p.id, p.name]))
   const topProductsData = Object.entries(productSales)
-    .map(([id, data]) => ({
-      name: productsMap.get(id) || "უცნობი",
-      amount: data.amount,
-    }))
+    .map(([_, data]) => data)
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
+
+  // Category sales distribution
+  const categorySales: Record<string, number> = {}
+  transactions
+    .filter((t) => t.type === "sale")
+    .forEach((t) => {
+      const product = productsMap.get(t.product_id)
+      const catId = product?.category_id || "uncategorized"
+      categorySales[catId] = (categorySales[catId] || 0) + Number(t.total_amount)
+    })
+
+  const categoryPieData = Object.entries(categorySales).map(([id, amount]) => ({
+    name: id === "uncategorized" ? "სხვა" : catsMap.get(id) || "სხვა",
+    value: amount,
+  }))
 
   return {
     totalProducts,
@@ -96,11 +116,13 @@ async function fetchDashboardData() {
     balance: totalSales - totalPurchases,
     trendData,
     topProductsData,
+    categoryPieData,
   }
 }
 
 export default function DashboardPage() {
   const { data, isLoading } = useSWR("dashboard-data", fetchDashboardData)
+  const router = useRouter()
 
   const stats = [
     {
@@ -109,13 +131,15 @@ export default function DashboardPage() {
       suffix: "",
       icon: Package,
       color: "text-primary",
+      href: "/dashboard/inventory",
     },
     {
       label: "მთლიანი სტოკი",
       value: data?.totalStock || 0,
       suffix: "",
       icon: Package,
-      color: "text-chart-3",
+      color: "text-emerald-500",
+      href: "/dashboard/inventory",
     },
     {
       label: "შესყიდვები",
@@ -123,6 +147,7 @@ export default function DashboardPage() {
       suffix: " \u20BE",
       icon: TrendingDown,
       color: "text-destructive",
+      href: "/dashboard/accounting",
     },
     {
       label: "გაყიდვები",
@@ -130,13 +155,15 @@ export default function DashboardPage() {
       suffix: " \u20BE",
       icon: TrendingUp,
       color: "text-success",
+      href: "/dashboard/accounting",
     },
     {
       label: "ბალანსი",
       value: `${(data?.balance || 0).toFixed(2)}`,
       suffix: " \u20BE",
       icon: DollarSign,
-      color: "text-chart-3",
+      color: "text-emerald-600",
+      href: "/dashboard/accounting",
     },
     {
       label: "დაბალი მარაგი",
@@ -144,15 +171,18 @@ export default function DashboardPage() {
       suffix: "",
       icon: Package,
       color: "text-warning",
+      href: "/dashboard/inventory",
     },
   ]
+
+  const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6"]
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold text-foreground">{"მთავარი"}</h1>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="flex flex-col items-center gap-2 p-6">
@@ -164,18 +194,20 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
           {stats.map((stat) => (
-            <Card key={stat.label}>
-              <CardContent className="flex flex-col items-center gap-2 p-6">
-                <stat.icon className={cn("h-8 w-8", stat.color)} />
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className={cn("text-xl font-bold", stat.color)}>
-                  {stat.value}
-                  {stat.suffix}
-                </p>
-              </CardContent>
-            </Card>
+            <Link key={stat.label} href={stat.href}>
+              <Card className="hover:bg-accent/50 transition-colors cursor-pointer group">
+                <CardContent className="flex flex-col items-center gap-2 p-6">
+                  <stat.icon className={cn("h-8 w-8 transition-transform group-hover:scale-110", stat.color)} />
+                  <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
+                  <p className={cn("text-lg sm:text-xl font-bold", stat.color)}>
+                    {stat.value}
+                    {stat.suffix}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
@@ -221,17 +253,26 @@ export default function DashboardPage() {
                     <Line
                       type="monotone"
                       dataKey="გაყიდვა"
-                      stroke="hsl(var(--success))"
+                      stroke="#10b981"
                       strokeWidth={3}
-                      dot={{ r: 4, fill: "hsl(var(--success))" }}
+                      dot={{ r: 4, fill: "#10b981" }}
                       activeDot={{ r: 6 }}
                     />
                     <Line
                       type="monotone"
                       dataKey="შესყიდვა"
-                      stroke="hsl(var(--destructive))"
+                      stroke="#ef4444"
                       strokeWidth={3}
-                      dot={{ r: 4, fill: "hsl(var(--destructive))" }}
+                      dot={{ r: 4, fill: "#ef4444" }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="მოგება"
+                      stroke="#3b82f6"
+                      strokeWidth={3}
+                      strokeDasharray="5 5"
+                      dot={{ r: 4, fill: "#3b82f6" }}
                       activeDot={{ r: 6 }}
                     />
                   </LineChart>
@@ -240,8 +281,48 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Top Products Chart */}
+          {/* Category Distribution Chart */}
           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <PieChartIcon className="h-5 w-5 text-primary" />
+                {"გაყიდვები კატეგორიების მიხედვით"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data?.categoryPieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {data?.categoryPieData?.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px"
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Products Chart */}
+          <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <BarChart3 className="h-5 w-5 text-primary" />
@@ -249,9 +330,9 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px] w-full mt-4">
+              <div className="h-[350px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data?.topProductsData} layout="vertical">
+                  <BarChart data={data?.topProductsData} layout="vertical" margin={{ left: 40, right: 40 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
                     <XAxis
                       type="number"
@@ -268,7 +349,7 @@ export default function DashboardPage() {
                       tickLine={false}
                       axisLine={false}
                       stroke="hsl(var(--muted-foreground))"
-                      width={100}
+                      width={120}
                     />
                     <Tooltip
                       cursor={{ fill: "hsl(var(--muted)/0.2)" }}
@@ -278,9 +359,9 @@ export default function DashboardPage() {
                         borderRadius: "8px"
                       }}
                     />
-                    <Bar dataKey="amount" name="ჯამი" radius={[0, 4, 4, 0]}>
+                    <Bar dataKey="amount" name="ჯამი" radius={[0, 4, 4, 0]} barSize={30}>
                       {data?.topProductsData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(var(--primary) / ${1 - index * 0.15})`} />
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Bar>
                   </BarChart>
