@@ -24,6 +24,9 @@ export async function getBusinessContext() {
 
 კატეგორიები: ${categories.map(c => c.name).join(", ")}
 
+პროდუქტების სია (და მათი ბარკოდები):
+${products.map(p => `- ${p.name}: ${p.barcode || "ბარკოდი არაა"} (${p.quantity} ${p.unit})`).join("\n")}
+
 პროდუქტების ჯამური რაოდენობა: ${products.length}
 დაბალი მარაგის მქონე პროდუქტები (${lowStock.length} ცალი):
 ${lowStock.map(p => `- ${p.name}: დარჩენილია ${p.quantity} ${p.unit} (მინიმალური: ${p.low_stock_threshold})`).join("\n")}

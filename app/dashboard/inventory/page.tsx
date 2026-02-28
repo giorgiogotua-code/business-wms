@@ -31,6 +31,7 @@ interface Product {
   unit: string
   low_stock_threshold: number
   categories: { name: string } | null
+  barcode: string | null
 }
 
 async function fetchProducts(): Promise<Product[]> {
@@ -61,6 +62,7 @@ export default function InventoryPage() {
     unit: "",
     low_stock_threshold: "",
     category_id: "",
+    barcode: "",
   })
   const [sellingProduct, setSellingProduct] = useState<Product | null>(null)
   const [sellForm, setSellForm] = useState({ quantity: "1", price: "" })
@@ -71,7 +73,8 @@ export default function InventoryPage() {
 
   const filteredProducts = products
     .filter((p) => {
-      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase())
+      const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.barcode && p.barcode.toLowerCase().includes(search.toLowerCase()))
       const matchesCategory =
         selectedCategory === "all" ||
         (selectedCategory === "uncategorized" ? !p.category_id : p.category_id === selectedCategory)
@@ -98,6 +101,7 @@ export default function InventoryPage() {
       unit: product.unit,
       low_stock_threshold: String(product.low_stock_threshold),
       category_id: product.category_id || "",
+      barcode: product.barcode || "",
     })
   }
 
@@ -115,6 +119,7 @@ export default function InventoryPage() {
         unit: editForm.unit,
         low_stock_threshold: Number(editForm.low_stock_threshold),
         category_id: editForm.category_id || null,
+        barcode: editForm.barcode || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", editProduct.id)
@@ -206,6 +211,7 @@ export default function InventoryPage() {
       "რაოდენობა": p.quantity,
       "ერთეული": p.unit,
       "მინ. მარაგი": p.low_stock_threshold,
+      "ბარკოდი": p.barcode || "-",
     }))
     exportToExcel(data, `ნაშთი_${new Date().toISOString().slice(0, 10)}`, "ნაშთი")
     toast.success("Excel ჩამოიტვირთა")
@@ -223,9 +229,10 @@ export default function InventoryPage() {
         const salePrice = Number(row["გასაყიდი ფასი"] || row["sale_price"] || 0)
         const quantity = Number(row["რაოდენობა"] || row["quantity"] || 0)
         const unit = (row["ერთეული"] as string) || (row["unit"] as string) || "ცალი"
+        const barcode = (row["ბარკოდი"] as string) || (row["barcode"] as string) || null
         if (name && salePrice > 0) {
           await supabase.from("products").insert({
-            name, purchase_price: purchasePrice, sale_price: salePrice, quantity, unit,
+            name, purchase_price: purchasePrice, sale_price: salePrice, quantity, unit, barcode,
           })
           count++
         }
@@ -343,6 +350,7 @@ export default function InventoryPage() {
                         {product.categories?.name && <span>{product.categories.name}</span>}
                         <span>{`გასაყიდი: ${Number(product.sale_price).toFixed(2)} \u20BE`}</span>
                         <span>{`რაოდენობა: ${product.quantity} ${product.unit}`}</span>
+                        {product.barcode && <span className="text-primary font-mono">{`ბარკოდი: ${product.barcode}`}</span>}
                       </div>
                     </div>
                   </div>
@@ -414,6 +422,10 @@ export default function InventoryPage() {
                     <SelectItem value="მეტრი">{"მეტრი"}</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>{"ბარკოდი"}</Label>
+                <Input value={editForm.barcode} onChange={(e) => setEditForm({ ...editForm, barcode: e.target.value })} placeholder="ბარკოდი / შტრიხკოდი" />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>{"მინ. მარაგი"}</Label>

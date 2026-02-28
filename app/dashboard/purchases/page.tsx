@@ -50,6 +50,7 @@ export default function PurchasesPage() {
         "გასაყიდი ფასი": "15.00",
         "რაოდენობა": "100",
         "ერთეული": "ცალი",
+        "ბარკოდი": "1234567890",
       }
     ]
     exportToExcel(templateData, "შესყიდვების_შაბლონი", "შაბლონი")
@@ -64,6 +65,7 @@ export default function PurchasesPage() {
       "გასაყიდი ფასი": Number((p as { sale_price: number }).sale_price).toFixed(2),
       "რაოდენობა": (p as { quantity: number }).quantity,
       "ერთეული": (p as { unit: string }).unit,
+      "ბარკოდი": (p as { barcode: string }).barcode || "-",
     }))
     exportToExcel(data, `პროდუქტები_${new Date().toISOString().slice(0, 10)}`, "პროდუქტები")
     toast.success("Excel ჩამოიტვირთა")
@@ -81,9 +83,10 @@ export default function PurchasesPage() {
         const salePrice = Number(row["გასაყიდი ფასი"] || row["sale_price"] || 0)
         const quantity = Number(row["რაოდენობა"] || row["quantity"] || 0)
         const unit = (row["ერთეული"] as string) || (row["unit"] as string) || "ცალი"
+        const barcode = (row["ბარკოდი"] as string) || (row["barcode"] as string) || null
         if (name && salePrice > 0) {
           const { data: { user } } = await supabase.auth.getUser()
-          const { data: product } = await supabase.from("products").insert({ name, purchase_price: purchasePrice, sale_price: salePrice, quantity, unit }).select().single()
+          const { data: product } = await supabase.from("products").insert({ name, purchase_price: purchasePrice, sale_price: salePrice, quantity, unit, barcode }).select().single()
           if (product && quantity > 0) {
             await supabase.from("transactions").insert({
               product_id: product.id,
@@ -116,6 +119,7 @@ export default function PurchasesPage() {
   const [quantity, setQuantity] = useState("")
   const [unit, setUnit] = useState("ცალი")
   const [supplierId, setSupplierId] = useState("")
+  const [barcode, setBarcode] = useState("")
 
   // Add stock form
   const [stockProductId, setStockProductId] = useState("")
@@ -138,6 +142,7 @@ export default function PurchasesPage() {
         quantity: Number(quantity),
         unit,
         supplier_id: supplierId || null,
+        barcode: barcode || null,
       })
       .select()
       .single()
@@ -173,6 +178,7 @@ export default function PurchasesPage() {
     setQuantity("")
     setUnit("ცალი")
     setSupplierId("")
+    setBarcode("")
     setShowNewProduct(false)
     setLoading(false)
     mutate("products")
@@ -306,6 +312,15 @@ export default function PurchasesPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label>{"ბარკოდი"}</Label>
+                <Input
+                  placeholder="დასკანერეთ ან ჩაწერეთ შტრიხკოდი"
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                />
               </div>
 
               <div className="flex flex-col gap-2">

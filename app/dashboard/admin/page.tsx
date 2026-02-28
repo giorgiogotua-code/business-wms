@@ -158,6 +158,7 @@ export default function AdminPage() {
         "გასაყიდი ფასი": (p as { sale_price: number }).sale_price,
         "რაოდენობა": (p as { quantity: number }).quantity,
         "ერთეული": (p as { unit: string }).unit,
+        "ბარკოდი": (p as { barcode: string }).barcode || "-",
       }))
       exportToExcel(productsData, `ბექაფი_პროდუქტები_${new Date().toISOString().slice(0, 10)}`, "პროდუქტები")
 

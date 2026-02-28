@@ -25,6 +25,7 @@ interface Product {
   quantity: number
   unit: string
   categories: { name: string } | null
+  barcode: string | null
 }
 
 interface CartItem {
@@ -54,6 +55,7 @@ export default function SalesPage() {
   const [salePrice, setSalePrice] = useState("")
   const [cart, setCart] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [barcodeScan, setBarcodeScan] = useState("")
 
   const filteredProducts = useMemo(() => {
     if (categoryFilter === "all") return products.filter((p) => p.quantity > 0)
@@ -109,6 +111,48 @@ export default function SalesPage() {
     setQuantity("")
     setSalePrice("")
     toast.success(`${selectedProduct.name} დაემატა კალათაში`)
+  }
+
+  function handleBarcodeSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!barcodeScan) return
+
+    const product = products.find(p => p.barcode === barcodeScan)
+    if (!product) {
+      toast.error("პროდუქტი ბარკოდით ვერ მოიძებნა")
+      setBarcodeScan("")
+      return
+    }
+
+    if (product.quantity <= 0) {
+      toast.error("პროდუქტი ამოწურულია")
+      setBarcodeScan("")
+      return
+    }
+
+    // Add to cart logic (similar to addToCart but automated)
+    const existingIndex = cart.findIndex(item => item.id === product.id)
+    if (existingIndex > -1) {
+      const newCart = [...cart]
+      if (newCart[existingIndex].quantity + 1 > product.quantity) {
+        toast.error("მარაგი არ არის საკმარისი")
+      } else {
+        newCart[existingIndex].quantity += 1
+        setCart(newCart)
+        toast.success(`${product.name} დაემატა (+1)`)
+      }
+    } else {
+      setCart([...cart, {
+        id: product.id,
+        name: product.name,
+        quantity: 1,
+        price: product.sale_price,
+        unit: product.unit
+      }])
+      toast.success(`${product.name} დაემატა კალათაში`)
+    }
+
+    setBarcodeScan("")
   }
 
   function removeFromCart(id: string) {
@@ -197,7 +241,33 @@ export default function SalesPage() {
             <CardHeader>
               <CardTitle>{"პროდუქტის შერჩევა"}</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              {/* Barcode Scanner Input */}
+              <form onSubmit={handleBarcodeSubmit} className="relative">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-primary flex items-center gap-2">
+                    <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    {"ბარკოდის სკანერი (დაასკანერეთ)"}
+                  </Label>
+                  <Input
+                    placeholder="დაასკანერეთ შტრიხკოდი..."
+                    className="h-12 text-lg border-primary/50 focus:border-primary focus:ring-primary/20"
+                    value={barcodeScan}
+                    onChange={(e) => setBarcodeScan(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </form>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">{"ან ხელით შერჩევა"}</span>
+                </div>
+              </div>
+
               <form onSubmit={addToCart} className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {/* Category Filter */}
