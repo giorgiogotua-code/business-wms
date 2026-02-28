@@ -42,6 +42,20 @@ export default function PurchasesPage() {
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  function handleDownloadTemplate() {
+    const templateData = [
+      {
+        "სახელი": "მაგალითი პროდუქტი",
+        "შესყიდვის ფასი": "10.00",
+        "გასაყიდი ფასი": "15.00",
+        "რაოდენობა": "100",
+        "ერთეული": "ცალი",
+      }
+    ]
+    exportToExcel(templateData, "შესყიდვების_შაბლონი", "შაბლონი")
+    toast.info("შაბლონი ჩამოიტვირთა. გთხოვთ შეავსოთ მონაცემები.")
+  }
+
   function handleExportProducts() {
     const data = products.map((p: Record<string, unknown>) => ({
       "სახელი": (p as { name: string }).name,
@@ -228,6 +242,9 @@ export default function PurchasesPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">{"შესყიდვები"}</h1>
         <div className="flex gap-2 no-print">
+          <Button variant="outline" onClick={handleDownloadTemplate} aria-label="Excel შაბლონი">
+            <Download className="mr-2 h-5 w-5" /> Excel შაბლონი
+          </Button>
           <Button variant="outline" onClick={handleExportProducts} aria-label="Excel ექსპორტი">
             <Download className="mr-2 h-5 w-5" /> Excel ექსპორტი
           </Button>
